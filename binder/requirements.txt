@@ -1,0 +1,14 @@
+voila==0.5.13
+ipywidgets==8.1.9
+anywidget==0.11.0
+scipy
+astropy>=6.1
+astroquery>=0.4.10
+pyvo
+matplotlib
+pillow
+requests
+beautifulsoup4
+tifffile
+numpy
+ipykernel
