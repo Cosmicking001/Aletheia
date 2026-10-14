@@ -223,6 +223,11 @@ def gaia_check(disp, to_world, centre, radius_deg, scale_arcsec, gaia=None):
 # ----------------------------------------------------------------------------- the whole step
 # ----------------------------------------------------------------------------- quick solve (Session 20)
 QUICK_LIMIT_S = 40       # the quick solve gives up after this and hands over to astrometry.net
+# Web edition: a new visitor's pixel scale is unknown, so a ladder of scales (arcsec per pixel of the reduced copy)
+# is tried, each with a wide (30 per cent) tolerance; together they cover about 0.5 to 35 arcsec per pixel.
+SCALE_LADDER = (2.6, 4.1, 1.6, 6.6, 1.0, 10.5, 17.0, 0.62, 27.0)
+LADDER_STEP_S = 15
+LADDER_LIMIT_S = 120
 
 
 def _gaia_bright(centre, radius_deg, n=6000):
@@ -303,7 +308,7 @@ def _match_patterns(img, cat, s0, tol_scale=0.12, tol_inv=0.015, max_tries=4000)
     return A, t, np.nonzero(keep)[0], j[keep]
 
 
-def quick_solve(disp, centre, scale, wide=False, gaia=None, progress=print, limit_s=QUICK_LIMIT_S):
+def quick_solve(disp, centre, scale, wide=False, gaia=None, progress=print, limit_s=QUICK_LIMIT_S, tol_scale=0.12):
     """Seconds-fast solve when a rough position and the pixel scale (within about 10 per cent) are known: the
     brightest stars of your image are matched to Gaia DR3 by their triangle patterns, whatever the rotation and
     even if the image is mirrored; a TAN solution is then fitted to every matched star and checked.
@@ -326,7 +331,7 @@ def quick_solve(disp, centre, scale, wide=False, gaia=None, progress=print, limi
     for n_img, n_cat in ((80, 300 if wide else 160), (150, 600 if wide else 320)):
         if time.time() - t0 > limit_s:
             break
-        m = _match_patterns(xy[:n_img], plane[:n_cat], scale)
+        m = _match_patterns(xy[:n_img], plane[:n_cat], scale, tol_scale=tol_scale)
         if m is None:
             continue
         A, t, ii, jj = m
@@ -390,16 +395,38 @@ def plate_solve(path, key=None, progress=print, http=None, gaia=None, cache_dir=
         centre_guess, wide = (hint, True) if hint is not None else (
             (SkyCoord(hh["center_ra"] * u.deg, hh["center_dec"] * u.deg), False) if "center_ra" in hh else (None, False))
         w = job = None
-        if centre_guess is not None and scale_guess:
-            progress("quick solve: matching your stars to Gaia DR3...")
-            try:
-                w, _ = quick_solve(disp, centre_guess, scale_guess, wide, quick_gaia, progress)
-                k, method = 1, "quick solve (Gaia DR3)"
-            except Exception as exc:
-                progress(f"quick solve did not work ({' '.join(str(exc).split())[:60]}); asking astrometry.net")
+        quick_note = ""
+        if centre_guess is not None:
+            if scale_guess:
+                tries = [(scale_guess, 0.12, QUICK_LIMIT_S)]
+            else:                       # pixel scale unknown (a new web visitor): try the ladder
+                tries = [(s, 0.3, LADDER_STEP_S) for s in SCALE_LADDER]
+            t_q = time.time()
+            for n, (s_try, tol, lim) in enumerate(tries, 1):
+                if len(tries) > 1:
+                    if time.time() - t_q > LADDER_LIMIT_S:
+                        break
+                    progress(f"quick solve: pixel scale unknown, trying about {s_try * 1.0 / f:.1f}\"/px "
+                             f"({n} of {len(tries)})...")
+                else:
+                    progress("quick solve: matching your stars to Gaia DR3...")
+                try:
+                    w, _ = quick_solve(disp, centre_guess, s_try, wide, quick_gaia, lambda m: None, lim, tol)
+                    k, method = 1, "quick solve (Gaia DR3)"
+                    break
+                except Exception as exc:
+                    quick_note = " ".join(str(exc).split())[:60]
+                    if "Gaia" in quick_note and "few" not in quick_note:
+                        break
+            if w is None and key:
+                progress(f"quick solve did not work ({quick_note}); asking astrometry.net")
         if w is None:
             if not key:
-                raise RuntimeError("no plate solution in the file and no astrometry.net key saved")
+                if centre_guess is None:
+                    raise RuntimeError("type a rough position in the box (an object name, or the RA Dec of anything in "
+                                       "the picture) and press Plate solve again")
+                raise RuntimeError(f"the stars could not be matched to Gaia near that position ({quick_note}). Check the "
+                                   "rough position is inside the picture; a less stretched image or a FITS file helps")
             if scale_guess and "scale_lower" not in hh:
                 hh.update(scale_units="arcsecperpix", scale_lower=0.85 * scale_guess, scale_upper=1.15 * scale_guess)
             if hint is not None:
@@ -769,7 +796,7 @@ def uploader_html(callback="aletheia.chunk", where="My Drive › Aletheia › up
          fill.style.width = pc + "%";
          out.textContent = "Sending " + f.name + " · " + pc + "% of " + (f.size / 1e6).toFixed(1) + " MB";
        }}
-       out.textContent = "Saved " + f.name + " · press Plate solve";
+       out.textContent = "Saved " + f.name + " · type a rough position below, then press Plate solve";
      }} catch (e) {{ out.textContent = "Could not send " + f.name + ": " + e; out.style.color = "#FF9F0A"; break; }}
    }}
    busy = false; inp.value = ""; setTimeout(() => {{ bar.style.display = "none"; fill.style.width = "0"; }}, 1200);

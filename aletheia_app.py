@@ -820,7 +820,7 @@ class AletheiaApp:
         self.mine_auto = W.Checkbox(value=True, indent=False, layout=lay(width="620px"),
                                     description="Search the surveys automatically (image centre, then each click)")
         self.mine_solve = W.Button(description="Plate solve", button_style="info", layout=lay(width="120px"))
-        self.mine_hint = W.Text(placeholder="Rough position (optional): object name or RA Dec, e.g. StDr 47",
+        self.mine_hint = W.Text(placeholder="Rough position: object name or RA Dec of anything in the picture, e.g. M 27",
                                 layout=lay(width="420px"),
                                 tooltip="With a rough position the image is solved in seconds, here in Colab")
         self.mine_points, self.mine_known, self.mine_sol, self.mine_circle = [], [], None, None
@@ -1598,7 +1598,7 @@ class AletheiaApp:
             part.replace(self._uploads() / name)
             self._mine_list()
             self.mine_files.value = name
-            self.mine_status.value = f"&nbsp;Saved {name} in Aletheia/uploads: press Plate solve"
+            self.mine_status.value = f"&nbsp;Saved {name} in Aletheia/uploads: type a rough position, then press Plate solve"
         return "ok"
 
     def _api_key(self):
