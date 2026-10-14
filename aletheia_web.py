@@ -127,6 +127,16 @@ def start(root=ROOT, seed=SEED, show=True, **app_kwargs):
     ui.mine.children[0].value = ("<div class='al-muted' style='font-size:12px;line-height:1.5'>Drop an image of your "
                                  "own below. With a rough position (an object name or RA Dec) it is plate solved in "
                                  "seconds; then click the nebula, or draw a circle around it.</div>")
+    # astrometry.net key: pasted by the visitor, kept in memory for this visit only (never saved, never in the code)
+    import ipywidgets as W
+    keybox = W.Password(placeholder="astrometry.net key (optional, only for this visit)",
+                        layout=W.Layout(width="420px"))
+    kids = list(ui.mine.children)
+    kids.insert(kids.index(ui.mine_auto), keybox)
+    ui.mine.children = tuple(kids)
+    ui.keybox = keybox
+    saved_key = ui._api_key
+    ui._api_key = lambda: (keybox.value or "").strip() or saved_key()
     bridge = Bridge(ui.callbacks)
     ui.ui.children = tuple(ui.ui.children) + (bridge,)
     ui.bridge = bridge
