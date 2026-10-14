@@ -1,0 +1,10 @@
+{
+ "method": "formula",
+ "n": 70,
+ "top1": 0.8714285714285714,
+ "top3": 0.9571428571428572,
+ "lo": 0.7733503128681549,
+ "hi": 0.9308597800875773,
+ "tested_on": "Weidmann et al. 2020 central stars, SIMBAD nebula sizes, not used for learning",
+ "date": "2026-10-12"
+}

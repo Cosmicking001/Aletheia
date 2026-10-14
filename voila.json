@@ -1,0 +1,20 @@
+{
+  "VoilaConfiguration": {
+    "theme": "dark",
+    "show_tracebacks": false,
+    "preheat_kernel": true
+  },
+  "VoilaKernelManager": {
+    "kernel_pools_config": {"default": {"pool_size": 2}},
+    "preheat_denylist": []
+  },
+  "Voila": {
+    "ip": "0.0.0.0",
+    "port": 7860,
+    "open_browser": false,
+    "tornado_settings": {
+      "headers": {"Content-Security-Policy": "frame-ancestors 'self' https://huggingface.co https://*.hf.space"}
+    }
+  },
+  "MappingKernelManager": {"cull_idle_timeout": 1800, "cull_interval": 300}
+}
